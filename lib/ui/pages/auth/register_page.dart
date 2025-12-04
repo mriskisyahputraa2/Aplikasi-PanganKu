@@ -1,58 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
-import 'package:panganku_mobile/providers/auth_provider.dart';
-import 'package:panganku_mobile/ui/pages/auth/register_page.dart';
+// import 'package:provider/provider.dart';
+// import 'package:panganku_mobile/providers/auth_provider.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() async {
+  void _handleRegister() async {
     if (_formKey.currentState!.validate()) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-      final success = await authProvider.login(
-        _emailController.text.trim(),
-        _passwordController.text,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Fitur Register akan segera hadir!")),
       );
-
-      if (!mounted) return;
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Login Berhasil! Selamat Datang."),
-            backgroundColor: AppTheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        // Navigator.pushReplacementNamed(context, '/home'); // Nanti diaktifkan
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? "Login Gagal."),
-            backgroundColor: AppTheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
     }
   }
 
@@ -61,7 +40,7 @@ class _LoginPageState extends State<LoginPage> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.background, // Abu-abu sangat muda
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -69,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
             Stack(
               children: [
                 Container(
-                  height: size.height * 0.35,
+                  height: size.height * 0.35, // 35% tinggi layar
                   width: double.infinity,
                   decoration: const BoxDecoration(
                     color: AppTheme.primary,
@@ -80,7 +59,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   child: Stack(
                     children: [
-                      // Dekorasi Lingkaran
+                      // Dekorasi lingkaran transparan
                       Positioned(
                         top: -50,
                         right: -50,
@@ -106,32 +85,48 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
 
-                      // Logo di Tengah Header
+                      // Konten Header
                       SafeArea(
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SizedBox(height: 20),
-                              Hero(
-                                tag: 'logo',
-                                child: Image.asset(
-                                  'assets/images/logo.png',
-                                  height: 90, // Lebih besar sedikit di login
-                                ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
                               ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                "PanganKU",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.5,
-                                ),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.arrow_back_ios_new,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                  const Spacer(),
+                                  const Text(
+                                    "Buat Akun",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const SizedBox(
+                                    width: 48,
+                                  ), // Placeholder agar judul di tengah
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 20),
+                            Hero(
+                              tag: 'logo',
+                              child: Image.asset(
+                                'assets/images/logo.png', // Pastikan logo versi putih/kontras jika ada, atau default
+                                height: 80,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -142,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
 
             // 2. FORM CARD (MENGAMBANG)
             Transform.translate(
-              offset: const Offset(0, -40),
+              offset: const Offset(0, -40), // Naik ke atas menutupi header
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 padding: const EdgeInsets.all(24),
@@ -163,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Text(
-                        "Selamat Datang",
+                        "Daftar Sekarang",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 22,
@@ -173,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        "Masuk untuk mulai belanja kebutuhan dapur.",
+                        "Lengkapi data diri Anda untuk mulai berbelanja.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppTheme.textGrey,
@@ -182,19 +177,38 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 32),
 
+                      // Input Nama
+                      TextFormField(
+                        controller: _nameController,
+                        textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.words,
+                        validator: (val) =>
+                            val!.isEmpty ? "Nama wajib diisi" : null,
+                        decoration: InputDecoration(
+                          labelText: "Nama Lengkap",
+                          prefixIcon: const Icon(
+                            Icons.person_outline,
+                            color: AppTheme.primary,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       // Input Email
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        validator: (val) {
-                          if (val == null || val.isEmpty)
-                            return "Email wajib diisi";
-                          if (!val.contains('@')) return "Email tidak valid";
-                          return null;
-                        },
+                        textInputAction: TextInputAction.next,
+                        validator: (val) =>
+                            !val!.contains('@') ? "Email tidak valid" : null,
                         decoration: InputDecoration(
                           labelText: "Alamat Email",
-                          hintText: "contoh@email.com",
                           prefixIcon: const Icon(
                             Icons.email_outlined,
                             color: AppTheme.primary,
@@ -207,14 +221,15 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Input Password
                       TextFormField(
                         controller: _passwordController,
                         obscureText: !_isPasswordVisible,
+                        textInputAction: TextInputAction.next,
                         validator: (val) =>
-                            val!.isEmpty ? "Password wajib diisi" : null,
+                            val!.length < 6 ? "Minimal 6 karakter" : null,
                         decoration: InputDecoration(
                           labelText: "Kata Sandi",
                           prefixIcon: const Icon(
@@ -240,56 +255,54 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
 
-                      // Lupa Password
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {},
-                          child: const Text(
-                            "Lupa Kata Sandi?",
-                            style: TextStyle(
-                              color: AppTheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                      // Input Confirm Password
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: !_isPasswordVisible,
+                        textInputAction: TextInputAction.done,
+                        validator: (val) {
+                          if (val != _passwordController.text)
+                            return "Sandi tidak sama";
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                          labelText: "Ulangi Kata Sandi",
+                          prefixIcon: const Icon(
+                            Icons.lock_reset,
+                            color: AppTheme.primary,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 32),
 
-                      // Tombol Login
-                      Consumer<AuthProvider>(
-                        builder: (context, auth, child) {
-                          return ElevatedButton(
-                            onPressed: auth.isLoading ? null : _handleLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              elevation: 5,
-                              shadowColor: AppTheme.primary.withOpacity(0.4),
-                            ),
-                            child: auth.isLoading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 3,
-                                    ),
-                                  )
-                                : const Text(
-                                    "Masuk ke Akun",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                          );
-                        },
+                      // Tombol Daftar
+                      ElevatedButton(
+                        onPressed: _handleRegister,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 5,
+                          shadowColor: AppTheme.primary.withOpacity(0.4),
+                        ),
+                        child: const Text(
+                          "Daftar Sekarang",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -305,21 +318,13 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      "Belum punya akun? ",
+                      "Sudah punya akun? ",
                       style: TextStyle(color: AppTheme.textGrey),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        // Navigasi ke Register
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterPage(),
-                          ),
-                        );
-                      },
+                      onTap: () => Navigator.pop(context),
                       child: const Text(
-                        "Daftar Gratis",
+                        "Masuk",
                         style: TextStyle(
                           color: AppTheme.primary,
                           fontWeight: FontWeight.bold,
