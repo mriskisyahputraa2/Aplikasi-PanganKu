@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/auth_provider.dart';
-import 'package:panganku_mobile/ui/pages/auth/login_page.dart'; // Nanti kita buat ini
+import 'package:panganku_mobile/providers/product_provider.dart';
+import 'package:panganku_mobile/providers/cart_provider.dart';
+import 'package:panganku_mobile/ui/pages/auth/login_page.dart';
 
 void main() {
   runApp(
@@ -10,7 +12,8 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        // Nanti tambah CartProvider, ProductProvider disini
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: const MyApp(),
     ),
