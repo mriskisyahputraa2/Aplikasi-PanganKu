@@ -71,4 +71,32 @@ class AuthProvider with ChangeNotifier {
     _isLoading = value;
     notifyListeners(); // Beritahu semua halaman yang pakai provider ini untuk refresh
   }
+
+  // Fitur Register
+  Future<bool> register(
+    String name,
+    String email,
+    String password,
+    String passwordConfirmation,
+  ) async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      // 1. Panggil Service Register
+      // Kita tetap memanggil service, tapi hasil return-nya (user data) tidak kita simpan ke _user
+      await _authService.register(name, email, password, passwordConfirmation);
+
+      // [PERUBAHAN DI SINI]
+      // DULU: _user = user; await _authService.saveUserSession(user);
+      // SEKARANG: Kita kosongkan saja. Biarkan user login manual nanti.
+
+      _setLoading(false);
+      return true; // Sukses
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
+      _setLoading(false);
+      return false; // Gagal
+    }
+  }
 }

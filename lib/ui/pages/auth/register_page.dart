@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
-// import 'package:provider/provider.dart';
-// import 'package:panganku_mobile/providers/auth_provider.dart';
+import 'package:panganku_mobile/providers/auth_provider.dart';
+// import 'package:panganku_mobile/ui/pages/main_page.dart';
+import 'package:panganku_mobile/ui/pages/auth/login_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -11,10 +13,12 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // Controller Input
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
 
@@ -27,11 +31,46 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // Fungsi Register
   void _handleRegister() async {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Fitur Register akan segera hadir!")),
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Panggil fungsi register di Provider
+      final success = await authProvider.register(
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text,
+        _confirmPasswordController.text,
       );
+
+      if (!mounted) return;
+
+      if (success) {
+        // 1. Tampilkan Pesan Sukses
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Registrasi Berhasil! Silakan Login."),
+            backgroundColor: AppTheme.primary,
+            duration: Duration(seconds: 2), // Tampil agak lama
+          ),
+        );
+
+        // 2. [UBAH ARAH] Pindah ke Halaman Login
+        // pushAndRemoveUntil: Hapus halaman register dari history agar tidak bisa di-back
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? "Registrasi Gagal."),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -40,7 +79,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: AppTheme.background, // Abu-abu sangat muda
+      backgroundColor: AppTheme.background,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -59,7 +98,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   child: Stack(
                     children: [
-                      // Dekorasi lingkaran transparan
+                      // Dekorasi Lingkaran Transparan
                       Positioned(
                         top: -50,
                         right: -50,
@@ -85,7 +124,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
 
-                      // Konten Header
+                      // Konten Header (Tombol Back & Logo)
                       SafeArea(
                         child: Column(
                           children: [
@@ -114,15 +153,17 @@ class _RegisterPageState extends State<RegisterPage> {
                                   const Spacer(),
                                   const SizedBox(
                                     width: 48,
-                                  ), // Placeholder agar judul di tengah
+                                  ), // Penyeimbang layout
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 10),
+
+                            // Logo dengan Hero Animation
                             Hero(
                               tag: 'logo',
                               child: Image.asset(
-                                'assets/images/logo.png', // Pastikan logo versi putih/kontras jika ada, atau default
+                                'assets/images/logo.png',
                                 height: 80,
                               ),
                             ),
@@ -168,7 +209,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        "Lengkapi data diri Anda untuk mulai berbelanja.",
+                        "Lengkapi data diri Anda untuk mulai belanja.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppTheme.textGrey,
@@ -186,6 +227,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             val!.isEmpty ? "Nama wajib diisi" : null,
                         decoration: InputDecoration(
                           labelText: "Nama Lengkap",
+                          hintText: "Contoh: Budi Santoso",
                           prefixIcon: const Icon(
                             Icons.person_outline,
                             color: AppTheme.primary,
@@ -209,6 +251,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             !val!.contains('@') ? "Email tidak valid" : null,
                         decoration: InputDecoration(
                           labelText: "Alamat Email",
+                          hintText: "nama@email.com",
                           prefixIcon: const Icon(
                             Icons.email_outlined,
                             color: AppTheme.primary,
@@ -269,8 +312,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         },
                         decoration: InputDecoration(
                           labelText: "Ulangi Kata Sandi",
+                          // Menggunakan icon lock biasa agar aman
                           prefixIcon: const Icon(
-                            Icons.lock_reset,
+                            Icons.lock,
                             color: AppTheme.primary,
                           ),
                           filled: true,
@@ -285,24 +329,37 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 32),
 
                       // Tombol Daftar
-                      ElevatedButton(
-                        onPressed: _handleRegister,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 5,
-                          shadowColor: AppTheme.primary.withOpacity(0.4),
-                        ),
-                        child: const Text(
-                          "Daftar Sekarang",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      Consumer<AuthProvider>(
+                        builder: (context, auth, child) {
+                          return ElevatedButton(
+                            onPressed: auth.isLoading ? null : _handleRegister,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 5,
+                              shadowColor: AppTheme.primary.withOpacity(0.4),
+                            ),
+                            child: auth.isLoading
+                                ? const SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : const Text(
+                                    "Daftar Sekarang",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -310,10 +367,10 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ),
 
-            // 3. FOOTER TEXT
+            // 3. FOOTER LINK
             Center(
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.only(bottom: 30),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

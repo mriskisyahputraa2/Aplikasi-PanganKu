@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/auth_provider.dart';
 import 'package:panganku_mobile/ui/pages/auth/register_page.dart';
+import 'package:panganku_mobile/ui/pages/main_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -40,10 +41,13 @@ class _LoginPageState extends State<LoginPage> {
           const SnackBar(
             content: Text("Login Berhasil! Selamat Datang."),
             backgroundColor: AppTheme.primary,
-            behavior: SnackBarBehavior.floating,
           ),
         );
-        // Navigator.pushReplacementNamed(context, '/home'); // Nanti diaktifkan
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainPage()),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
