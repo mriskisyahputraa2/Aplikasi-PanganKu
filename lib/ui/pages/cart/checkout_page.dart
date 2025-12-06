@@ -97,15 +97,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
     // Validasi Bukti Transfer (Jika bukan Tunai, Wajib Upload)
-    if (_paymentMethod != 'tunai' && _paymentProofFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Harap upload bukti transfer"),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    // if (_paymentMethod != 'tunai' && _paymentProofFile == null) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //       content: Text("Harap upload bukti transfer"),
+    //       backgroundColor: Colors.red,
+    //     ),
+    //   );
+    //   return;
+    // }
 
     final checkoutProvider = Provider.of<CheckoutProvider>(
       context,
