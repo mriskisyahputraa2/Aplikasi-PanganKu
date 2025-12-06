@@ -1,18 +1,24 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart'; // Untuk kIsWeb
+
 class ApiConstants {
-  // --- OPSI 1: JIKA RUN DI BROWSER (CHROME/EDGE) ---
-  static const String baseUrl = "http://127.0.0.1:8000/api";
-  static const String imageUrl = "http://127.0.0.1:8000/storage/";
+  // LOGIKA OTOMATIS MEMILIH URL
+  static String get baseUrl {
+    if (kIsWeb) {
+      return "http://127.0.0.1:8000/api"; // Web Browser
+    } else if (Platform.isAndroid) {
+      // Cek apakah ini Emulator (biasanya device modelnya mengandung 'sdk')
+      // Tapi untuk aman, kita default ke 10.0.2.2 untuk emulator
+      // Jika pakai HP Fisik, Anda WAJIB ganti string ini manual ke IP Laptop (misal 192.168.1.X)
+      return "http://10.0.2.2:8000/api";
+    } else {
+      return "http://127.0.0.1:8000/api"; // iOS Simulator / Lainnya
+    }
+  }
 
-  // --- OPSI 2: JIKA RUN DI EMULATOR ANDROID ---
-  // static const String baseUrl = "http://10.0.2.2:8000/api";
-  // static const String imageUrl = "http://10.0.2.2:8000/storage/";
-
-  // --- OPSI 3: JIKA RUN DI HP FISIK (WIFI SAMA) ---
-  // static const String baseUrl = "http://192.168.1.X:8000/api"; // Ganti X dengan IP Laptop
-  // static const String imageUrl = "http://192.168.1.X:8000/storage/";
   // Endpoints
-  static const String login = "$baseUrl/login";
-  static const String register = "$baseUrl/register";
-  static const String user = "$baseUrl/user";
-  static const String logout = "$baseUrl/logout";
+  static String get login => "$baseUrl/login";
+  static String get register => "$baseUrl/register";
+  static String get user => "$baseUrl/user";
+  static String get logout => "$baseUrl/logout";
 }

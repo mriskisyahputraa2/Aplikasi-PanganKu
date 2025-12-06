@@ -4,8 +4,15 @@ class OrderModel {
   final int totalAmount;
   final String status;
   final String paymentStatus;
-  final String createdAtFormatted; // Tanggal cantik
-  final List<OrderItemModel> items; // Daftar barang
+  final String paymentMethod;
+  final String? paymentProofUrl; // [BARU]
+  final String deliveryType;
+  final String? shippingAddress;
+  final String? pickupTime;
+  final String? trackingNumber;
+  final String createdAtFormatted;
+  final String createdAtRaw; // [BARU] Untuk Timer
+  final List<OrderItemModel> items;
 
   OrderModel({
     required this.id,
@@ -13,7 +20,14 @@ class OrderModel {
     required this.totalAmount,
     required this.status,
     required this.paymentStatus,
+    this.paymentMethod = '',
+    this.paymentProofUrl,
+    this.deliveryType = '',
+    this.shippingAddress,
+    this.pickupTime,
+    this.trackingNumber,
     required this.createdAtFormatted,
+    this.createdAtRaw = '',
     required this.items,
   });
 
@@ -29,30 +43,34 @@ class OrderModel {
       totalAmount: json['total_amount'] ?? 0,
       status: json['status'] ?? 'pending',
       paymentStatus: json['payment_status'] ?? 'pending',
+      paymentMethod: json['payment_method'] ?? '',
+      paymentProofUrl: json['payment_proof_url'], // Mapping URL bukti
+      deliveryType: json['delivery_type'] ?? '',
+      shippingAddress: json['shipping_address'],
+      pickupTime: json['pickup_time'],
+      trackingNumber: json['tracking_number'],
       createdAtFormatted: json['created_at_formatted'] ?? '-',
+      createdAtRaw: json['created_at_raw'] ?? '',
       items: itemsList,
     );
   }
 }
 
 class OrderItemModel {
-  final int id;
   final String productName;
   final int quantity;
   final int price;
   final String? imageUrl;
 
   OrderItemModel({
-    required this.id,
     required this.productName,
-    required this.quantity,
-    required this.price,
+    this.quantity = 0,
+    this.price = 0,
     this.imageUrl,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
     return OrderItemModel(
-      id: json['id'],
       productName: json['product_name'] ?? 'Produk',
       quantity: json['quantity'] ?? 0,
       price: json['price'] ?? 0,
