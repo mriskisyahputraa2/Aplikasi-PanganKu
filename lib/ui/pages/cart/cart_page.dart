@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
+import 'package:panganku_mobile/ui/pages/cart/checkout_page.dart';
 import 'package:panganku_mobile/providers/cart_provider.dart';
 
 class CartPage extends StatefulWidget {
@@ -286,7 +287,12 @@ class _CartPageState extends State<CartPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          // TODO: Ke Halaman Checkout
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CheckoutPage(),
+                            ),
+                          );
                         },
                         child: const Text("Checkout Sekarang"),
                       ),
