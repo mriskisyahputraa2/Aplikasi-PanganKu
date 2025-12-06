@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:panganku_mobile/data/models/order_model.dart';
 import 'package:panganku_mobile/data/services/order_service.dart';
@@ -6,13 +7,20 @@ class OrderProvider with ChangeNotifier {
   final OrderService _service = OrderService();
 
   List<OrderModel> _orders = [];
+  OrderModel? _selectedOrder; // Menyimpan detail pesanan yang sedang dibuka
+
   bool _isLoading = false;
   String _currentStatus = 'all';
+  String? _errorMessage;
 
+  // Getters
   List<OrderModel> get orders => _orders;
+  OrderModel? get selectedOrder => _selectedOrder;
   bool get isLoading => _isLoading;
   String get currentStatus => _currentStatus;
+  String? get errorMessage => _errorMessage;
 
+  // 1. Fetch List Pesanan
   Future<void> fetchOrders({String status = 'all'}) async {
     _isLoading = true;
     _currentStatus = status;
@@ -23,6 +31,80 @@ class OrderProvider with ChangeNotifier {
     } catch (e) {
       print("Error fetching orders: $e");
       _orders = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // 2. Fetch Detail Pesanan
+  Future<void> fetchOrderDetail(int id) async {
+    _isLoading = true;
+    _selectedOrder = null; // Reset agar loading terlihat
+    notifyListeners();
+
+    try {
+      _selectedOrder = await _service.getOrderDetail(id);
+    } catch (e) {
+      _errorMessage = e.toString();
+      print("Error detail: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // 3. Upload Bukti
+  Future<bool> uploadProof(int orderId, File file) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _service.uploadProof(orderId, file);
+      // Refresh detail setelah upload sukses
+      await fetchOrderDetail(orderId);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // 4. Terima Pesanan
+  Future<bool> completeOrder(int orderId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _service.completeOrder(orderId);
+      // Refresh detail untuk update status jadi 'selesai'
+      await fetchOrderDetail(orderId);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // 5. Batalkan Pesanan
+  Future<bool> cancelOrder(int orderId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _service.cancelOrder(orderId);
+      // Refresh detail untuk update status jadi 'dibatalkan'
+      await fetchOrderDetail(orderId);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/order_provider.dart';
 import 'package:panganku_mobile/ui/widgets/order_card.dart';
+import 'package:panganku_mobile/ui/pages/history/order_detail_page.dart'; // [1] Import Halaman Detail
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -47,7 +48,7 @@ class _HistoryPageState extends State<HistoryPage> {
       ),
       body: Column(
         children: [
-          // FILTER TABS (Desain Lebih Bersih)
+          // FILTER TABS
           Container(
             height: 56,
             color: Colors.white,
@@ -148,14 +149,22 @@ class _HistoryPageState extends State<HistoryPage> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(20),
                     itemCount: provider.orders.length,
-                    separatorBuilder: (_, __) => const SizedBox(
-                      height: 0,
-                    ), // Card sudah punya margin bottom
+                    separatorBuilder: (_, __) => const SizedBox(height: 0),
                     itemBuilder: (context, index) {
+                      // [PERBAIKAN] Definisi Variabel 'order' disini
+                      final order = provider.orders[index];
+
                       return OrderCard(
-                        order: provider.orders[index],
+                        order: order, // Kirim data order ke card
                         onTap: () {
-                          // TODO: Navigasi ke DetailPage
+                          // [NAVIGASI] Pindah ke Halaman Detail
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  OrderDetailPage(orderId: order.id),
+                            ),
+                          );
                         },
                       );
                     },
