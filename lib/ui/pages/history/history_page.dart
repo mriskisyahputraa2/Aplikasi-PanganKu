@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/order_provider.dart';
 import 'package:panganku_mobile/ui/widgets/order_card.dart';
-import 'package:panganku_mobile/ui/pages/history/order_detail_page.dart'; // [1] Import Halaman Detail
+import 'package:panganku_mobile/ui/pages/history/order_detail_page.dart'; // Pastikan import ini ada
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -13,6 +13,7 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  // Tab Filter Status
   final List<Map<String, String>> _tabs = [
     {'label': 'Semua', 'val': 'all'},
     {'label': 'Belum Bayar', 'val': 'menunggu_pembayaran'},
@@ -22,18 +23,36 @@ class _HistoryPageState extends State<HistoryPage> {
     {'label': 'Batal', 'val': 'dibatalkan'},
   ];
 
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    // Load data pesanan saat halaman dibuka
     Future.microtask(
       () => Provider.of<OrderProvider>(context, listen: false).fetchOrders(),
     );
+
+    // Listener untuk infinite scroll
+    _scrollController.addListener(() {
+      // Panggil loadMoreOrders jika scroll mendekati akhir
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        Provider.of<OrderProvider>(context, listen: false).loadMoreOrders();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FA), // Background Abu lembut
       appBar: AppBar(
         title: const Text(
           "Riwayat Pesanan",
@@ -44,30 +63,34 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false, // Hilangkan tombol back di root tab
       ),
       body: Column(
         children: [
-          // FILTER TABS
+          // 1. FILTER TABS
           Container(
-            height: 56,
+            height: 60,
             color: Colors.white,
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               scrollDirection: Axis.horizontal,
               itemCount: _tabs.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final tab = _tabs[index];
+                // Cek status aktif dari provider
                 final isActive =
                     Provider.of<OrderProvider>(context).currentStatus ==
-                    tab['val'];
+                        tab['val'];
 
                 return GestureDetector(
-                  onTap: () => Provider.of<OrderProvider>(
-                    context,
-                    listen: false,
-                  ).fetchOrders(status: tab['val']!),
+                  onTap: () {
+                    // Fetch ulang data berdasarkan status yang dipilih
+                    Provider.of<OrderProvider>(
+                      context,
+                      listen: false,
+                    ).fetchOrders(status: tab['val']!);
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -85,7 +108,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       tab['label']!,
                       style: TextStyle(
                         color: isActive ? Colors.white : Colors.grey[600],
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
                     ),
@@ -95,16 +118,18 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
           ),
 
-          // LIST ORDER
+          // 2. LIST PESANAN
           Expanded(
             child: Consumer<OrderProvider>(
               builder: (context, provider, child) {
-                if (provider.isLoading) {
+                // State Loading (hanya untuk load awal)
+                if (provider.isLoading && provider.orders.isEmpty) {
                   return const Center(
                     child: CircularProgressIndicator(color: AppTheme.primary),
                   );
                 }
 
+                // State Kosong
                 if (provider.orders.isEmpty) {
                   return Center(
                     child: Column(
@@ -142,22 +167,35 @@ class _HistoryPageState extends State<HistoryPage> {
                   );
                 }
 
+                // State Ada Data
                 return RefreshIndicator(
                   onRefresh: () =>
                       provider.fetchOrders(status: provider.currentStatus),
                   color: AppTheme.primary,
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: provider.orders.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 0),
+                    controller: _scrollController, // Tambahkan controller
+                    padding: const EdgeInsets.all(16),
+                    itemCount: provider.orders.length +
+                        (provider.isLoadMoreRunning ? 1 : 0),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 16), // Jarak antar kartu
                     itemBuilder: (context, index) {
-                      // [PERBAIKAN] Definisi Variabel 'order' disini
+                      // Tampilkan loader di item terakhir jika sedang load more
+                      if (index == provider.orders.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Center(
+                            child:
+                                CircularProgressIndicator(color: AppTheme.primary),
+                          ),
+                        );
+                      }
                       final order = provider.orders[index];
 
                       return OrderCard(
-                        order: order, // Kirim data order ke card
+                        order: order,
                         onTap: () {
-                          // [NAVIGASI] Pindah ke Halaman Detail
+                          // Navigasi ke Halaman Detail
                           Navigator.push(
                             context,
                             MaterialPageRoute(

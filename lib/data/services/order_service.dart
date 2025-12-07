@@ -1,13 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:panganku_mobile/core/constants/api_constants.dart';
 import 'package:panganku_mobile/data/models/order_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class PaginatedOrders {
+  final List<OrderModel> orders;
+  final bool hasMore;
+
+  PaginatedOrders({required this.orders, required this.hasMore});
+}
+
 class OrderService {
-  // Helper untuk Header Token
+  // Helper Header Token
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
@@ -18,8 +24,10 @@ class OrderService {
   }
 
   // 1. AMBIL LIST PESANAN
-  Future<List<OrderModel>> getOrders({String status = 'all'}) async {
-    final uri = Uri.parse("${ApiConstants.baseUrl}/orders?status=$status");
+  Future<PaginatedOrders> getOrders(
+      {String status = 'all', int page = 1}) async {
+    final uri =
+        Uri.parse("${ApiConstants.baseUrl}/orders?status=$status&page=$page");
 
     try {
       final response = await http.get(uri, headers: await _getHeaders());
@@ -27,14 +35,27 @@ class OrderService {
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
 
-        // Handle struktur data (jika pakai pagination Laravel)
-        final List listData =
-            (jsonResponse['data'] is Map &&
-                jsonResponse['data']['data'] != null)
-            ? jsonResponse['data']['data']
-            : jsonResponse['data'];
+        var listData = [];
+        bool hasMorePages = false;
 
-        return listData.map((e) => OrderModel.fromJson(e)).toList();
+        // Handle struktur JSON dari Laravel Resource / Pagination
+        if (jsonResponse['data'] is Map &&
+            jsonResponse['data']['data'] != null) {
+          listData = jsonResponse['data']['data'];
+          // Check if there's a next page by comparing current and last page
+          final currentPage = jsonResponse['data']['current_page'];
+          final lastPage = jsonResponse['data']['last_page'];
+          if (currentPage != null &&
+              lastPage != null &&
+              currentPage < lastPage) {
+            hasMorePages = true;
+          }
+        } else if (jsonResponse['data'] is List) {
+          listData = jsonResponse['data'];
+        }
+
+        final orders = listData.map((e) => OrderModel.fromJson(e)).toList();
+        return PaginatedOrders(orders: orders, hasMore: hasMorePages);
       } else {
         throw Exception('Gagal memuat riwayat pesanan: ${response.statusCode}');
       }
@@ -50,13 +71,6 @@ class OrderService {
     try {
       final response = await http.get(uri, headers: await _getHeaders());
 
-      // [DEBUG] Cetak respons mentah dari server
-      if (kDebugMode) {
-        print("===== DETAIL PESANAN RESPONSE =====");
-        print(response.body);
-        print("===================================");
-      }
-
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         return OrderModel.fromJson(jsonResponse['data']);
@@ -64,27 +78,20 @@ class OrderService {
         throw Exception('Gagal memuat detail pesanan');
       }
     } catch (e) {
-      if (kDebugMode) {
-        print("===== DETAIL PESANAN ERROR =====");
-        print(e.toString());
-        print("================================");
-      }
       rethrow;
     }
   }
 
-  // 3. UPLOAD BUKTI BAYAR (POST MULTIPART)
+  // 3. UPLOAD BUKTI BAYAR (POST)
   Future<bool> uploadProof(int orderId, File imageFile) async {
     final uri = Uri.parse(
       "${ApiConstants.baseUrl}/orders/$orderId/upload-proof",
     );
 
-    // Gunakan POST (sesuai route api.php Anda)
     var request = http.MultipartRequest('POST', uri);
-
     request.headers.addAll(await _getHeaders());
 
-    // Tambahkan File
+    // Kirim File
     request.files.add(
       await http.MultipartFile.fromPath('payment_proof', imageFile.path),
     );
@@ -92,11 +99,6 @@ class OrderService {
     try {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-
-      if (kDebugMode) {
-        print("UPLOAD STATUS: ${response.statusCode}");
-        print("UPLOAD BODY: ${response.body}");
-      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
