@@ -44,7 +44,7 @@ class OrderModel {
       status: json['status'] ?? 'pending',
       paymentStatus: json['payment_status'] ?? 'pending',
       paymentMethod: json['payment_method'] ?? '',
-      paymentProofUrl: json['payment_proof_url'], // Mapping URL bukti
+      paymentProofUrl: json['payment_proof_url'],
       deliveryType: json['delivery_type'] ?? '',
       shippingAddress: json['shipping_address'],
       pickupTime: json['pickup_time'],
