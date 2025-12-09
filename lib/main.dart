@@ -5,9 +5,10 @@ import 'package:panganku_mobile/providers/auth_provider.dart';
 import 'package:panganku_mobile/providers/product_provider.dart';
 import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/providers/checkout_provider.dart';
-import 'package:panganku_mobile/ui/pages/auth/login_page.dart';
+// import 'package:panganku_mobile/ui/pages/auth/login_page.dart';
 import 'package:panganku_mobile/providers/order_provider.dart';
 import 'package:panganku_mobile/providers/setting_provider.dart';
+import 'package:panganku_mobile/ui/pages/splash_page.dart';
 
 void main() {
   runApp(
@@ -37,7 +38,8 @@ class MyApp extends StatelessWidget {
       title: 'PanganKU',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const LoginPage(), // Arahkan ke Login Page dulu
+      home: const SplashPage(),
+      // home: const LoginPage(), // Arahkan ke Login Page dulu
     );
   }
 }
