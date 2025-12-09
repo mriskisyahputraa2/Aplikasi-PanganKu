@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
+import 'package:panganku_mobile/providers/setting_provider.dart';
 import 'package:panganku_mobile/providers/order_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,9 +25,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   File? _selectedProof;
   Timer? _timer;
   String _timeLeft = "";
-
-  // Nomor WA Admin (Default)
-  final String _adminPhone = "628123456789";
 
   @override
   void initState() {
@@ -100,8 +98,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   void _contactAdmin(String orderNumber) async {
+    // [AMBIL DARI PROVIDER]
+    final settings = Provider.of<SettingProvider>(context, listen: false);
+
+    // Format nomor (hapus 0 depan, ganti 62)
+    String phone = settings.adminPhone.replaceAll(RegExp(r'\D'), '');
+    if (phone.startsWith('0')) phone = "62${phone.substring(1)}";
+
     final url = Uri.parse(
-      "https://wa.me/$_adminPhone?text=Halo Admin PanganKU, saya butuh bantuan untuk pesanan #$orderNumber",
+      "https://wa.me/$phone?text=Halo Admin PanganKU, saya butuh bantuan untuk pesanan #$orderNumber",
     );
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
