@@ -7,6 +7,7 @@ import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/providers/checkout_provider.dart';
 import 'package:panganku_mobile/ui/pages/auth/login_page.dart';
 import 'package:panganku_mobile/providers/order_provider.dart';
+import 'package:panganku_mobile/providers/setting_provider.dart';
 
 void main() {
   runApp(
@@ -18,6 +19,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => CheckoutProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => SettingProvider()),
       ],
       child: const MyApp(),
     ),
@@ -29,6 +32,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Provider.of<SettingProvider>(context, listen: false).fetchSettings();
     return MaterialApp(
       title: 'PanganKU',
       debugShowCheckedModeBanner: false,

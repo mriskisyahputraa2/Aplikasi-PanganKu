@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:panganku_mobile/data/models/user_model.dart';
 import 'package:panganku_mobile/data/services/auth_service.dart';
@@ -10,69 +11,30 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Getter agar UI bisa membaca data (tapi tidak bisa ubah langsung)
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
 
-  // Fungsi Login
+  // LOGIN
   Future<bool> login(String email, String password) async {
     _setLoading(true);
-    _errorMessage = null; // Reset error
+    _errorMessage = null;
 
     try {
-      // 1. Panggil Service
       final user = await _authService.login(email, password);
-
-      // 2. Simpan data di memory
       _user = user;
-
-      // 3. Simpan sesi di HP (biar gak login ulang terus)
       await _authService.saveUserSession(user);
-
       _setLoading(false);
-      return true; // Berhasil
+      return true;
     } catch (e) {
       _errorMessage = e.toString().replaceAll("Exception: ", "");
       _setLoading(false);
-      return false; // Gagal
+      return false;
     }
   }
 
-  // Fungsi Logout
-  Future<void> logout() async {
-    await _authService.logout();
-    _user = null;
-    notifyListeners();
-  }
-
-  // Fungsi Cek Status Login saat Aplikasi Dibuka (Auto Login)
-  Future<void> checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    final name = prefs.getString('user_name');
-    final email = prefs.getString('user_email');
-
-    if (token != null && name != null && email != null) {
-      // Restore user dari memori HP
-      _user = UserModel(
-        id: 0,
-        name: name,
-        email: email,
-        token: token,
-      ); // ID 0 sementara, nanti bisa fetch profile
-    }
-    notifyListeners();
-  }
-
-  // Helper untuk ubah loading state & update UI
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners(); // Beritahu semua halaman yang pakai provider ini untuk refresh
-  }
-
-  // Fitur Register
+  // REGISTER
   Future<bool> register(
     String name,
     String email,
@@ -83,20 +45,80 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
 
     try {
-      // 1. Panggil Service Register
-      // Kita tetap memanggil service, tapi hasil return-nya (user data) tidak kita simpan ke _user
+      // Hanya panggil service, tidak auto login
       await _authService.register(name, email, password, passwordConfirmation);
-
-      // [PERUBAHAN DI SINI]
-      // DULU: _user = user; await _authService.saveUserSession(user);
-      // SEKARANG: Kita kosongkan saja. Biarkan user login manual nanti.
-
       _setLoading(false);
-      return true; // Sukses
+      return true;
     } catch (e) {
       _errorMessage = e.toString().replaceAll("Exception: ", "");
       _setLoading(false);
-      return false; // Gagal
+      return false;
     }
+  }
+
+  // UPDATE PROFILE
+  Future<bool> updateProfile(String name, File? photo) async {
+    if (_user == null) {
+      _errorMessage = "User not authenticated.";
+      return false;
+    }
+
+    _setLoading(true);
+    try {
+      // 1. Panggil service, dapatkan user model dengan data parsial (tanpa token)
+      final partialUpdate = await _authService.updateProfile(name, photo);
+
+      // 2. Gabungkan data baru ke user state yang ada menggunakan copyWith
+      // Ini memastikan token dan role yang ada tidak hilang
+      _user = _user!.copyWith(
+        name: partialUpdate.name,
+        // ValueGetter memastikan kita bisa set photoUrl ke null secara eksplisit
+        photoUrl: () => partialUpdate.photoUrl,
+      );
+
+      // 3. Simpan sesi lengkap yang sudah diperbarui
+      await _authService.saveUserSession(_user!);
+
+      _errorMessage = null;
+      _setLoading(false);
+      notifyListeners(); // Beri tahu UI tentang perubahan
+      return true;
+    } catch (e) {
+      print("Provider Update Error: $e");
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  // LOGOUT
+  Future<void> logout() async {
+    await _authService.logout();
+    _user = null;
+    notifyListeners();
+  }
+
+  // CHECK SESSION (Auto Login)
+  Future<void> checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final name = prefs.getString('user_name');
+    final email = prefs.getString('user_email');
+    final photo = prefs.getString('user_photo');
+
+    if (token != null && name != null) {
+      _user = UserModel.fromMap({
+        'id': 0, // ID tidak disimpan di prefs, jadi default
+        'name': name,
+        'email': email ?? '',
+        'photo_url': photo,
+      }, token: token);
+    }
+    notifyListeners();
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
   }
 }
