@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/auth_provider.dart';
 import 'package:panganku_mobile/providers/product_provider.dart';
 import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/ui/widgets/product_card.dart';
+import 'package:panganku_mobile/ui/pages/product/product_detail_page.dart';
+import 'package:panganku_mobile/ui/pages/product/catalog_page.dart';
+import 'package:panganku_mobile/ui/pages/cart/cart_page.dart'; // Import Cart Page
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,6 +19,31 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final TextEditingController _searchController = TextEditingController();
+  final PageController _bannerController = PageController();
+  int _currentBanner = 0;
+  Timer? _timer;
+
+  // Data Banner Statis
+  final List<Map<String, dynamic>> _banners = [
+    {
+      "color": [const Color(0xFF065F46), const Color(0xFF10B981)], // Hijau
+      "title": "Promo Gajian",
+      "subtitle": "Diskon Daging\nHingga 30%",
+      "image": "assets/images/logo.png",
+    },
+    {
+      "color": [const Color(0xFFC2410C), const Color(0xFFFB923C)], // Orange
+      "title": "Gratis Ongkir",
+      "subtitle": "Belanja Hemat\nTanpa Batas",
+      "image": "assets/icons/chicken.png",
+    },
+    {
+      "color": [const Color(0xFF1E40AF), const Color(0xFF60A5FA)], // Biru
+      "title": "Paket Sayur",
+      "subtitle": "Masak Sehat\nMulai 15Rb",
+      "image": "assets/icons/broccoli.png",
+    },
+  ];
 
   @override
   void initState() {
@@ -27,12 +55,31 @@ class _HomePageState extends State<HomePage> {
       );
       productProvider.fetchCategories();
       productProvider.fetchProducts();
+      // Pastikan cart juga di-load agar badge angka muncul benar
+      Provider.of<CartProvider>(context, listen: false).getCart();
+    });
+    _startAutoSlide();
+  }
+
+  void _startAutoSlide() {
+    _timer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+      if (_bannerController.hasClients) {
+        int nextPage = _currentBanner + 1;
+        if (nextPage >= _banners.length) nextPage = 0;
+        _bannerController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.fastOutSlowIn,
+        );
+      }
     });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _bannerController.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -50,7 +97,6 @@ class _HomePageState extends State<HomePage> {
     ).fetchProducts(query: _searchController.text, category: slug);
   }
 
-  // LOGIC ICON (SAMA SEPERTI SEBELUMNYA)
   String _getCategoryIconPath(String name) {
     final n = name.toLowerCase();
     if (n.contains('semua') || n.contains('all'))
@@ -60,18 +106,13 @@ class _HomePageState extends State<HomePage> {
       return 'assets/icons/chicken-breast.png';
     if (n.contains('jeroan') || n.contains('daging') || n.contains('sapi'))
       return 'assets/icons/meat.png';
-    if (n.contains('ayam') || n.contains('utuh'))
-      return 'assets/icons/chicken.png';
-    if (n.contains('ikan') || n.contains('lele'))
-      return 'assets/icons/fish.png';
+    if (n.contains('ayam')) return 'assets/icons/chicken.png';
+    if (n.contains('ikan')) return 'assets/icons/fish.png';
     if (n.contains('telur')) return 'assets/icons/eggs.png';
-    if (n.contains('beras') || n.contains('nasi'))
-      return 'assets/icons/rice.png';
+    if (n.contains('beras')) return 'assets/icons/rice.png';
     if (n.contains('minyak')) return 'assets/icons/oil.png';
-    if (n.contains('bumbu') || n.contains('rempah'))
-      return 'assets/icons/spices.png';
-    if (n.contains('sayur') || n.contains('brokoli'))
-      return 'assets/icons/broccoli.png';
+    if (n.contains('bumbu')) return 'assets/icons/spices.png';
+    if (n.contains('sayur')) return 'assets/icons/broccoli.png';
     if (n.contains('buah')) return 'assets/icons/fruits.png';
     return 'assets/icons/list.png';
   }
@@ -83,281 +124,481 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
-        bottom: false, // Biarkan konten mengalir ke bawah navbar floating
+        bottom: false,
         child: RefreshIndicator(
           onRefresh: () async {
-            final provider = Provider.of<ProductProvider>(
+            final p = Provider.of<ProductProvider>(context, listen: false);
+            await p.fetchCategories();
+            await p.fetchProducts();
+            await Provider.of<CartProvider>(
               context,
               listen: false,
-            );
-            await provider.fetchCategories();
-            await provider.fetchProducts();
+            ).getCart(); // Refresh Cart Badge
           },
-          color: AppTheme.primary,
           child: CustomScrollView(
             slivers: [
-              // 1. HEADER & SEARCH
+              // 1. HEADER (LOKASI, PROFILE & KERANJANG BADGE)
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(24),
+                    ),
+                  ),
                   child: Column(
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Halo, ${user?.name?.split(' ')[0] ?? 'Pelanggan'} 👋",
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textDark,
-                                  fontFamily: 'ClashDisplay',
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Dikirim ke Rumah ▾",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                "Mau masak apa hari ini?",
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Halo, ${user?.name?.split(' ')[0] ?? 'Pelanggan'} 👋",
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'ClashDisplay',
+                                    color: AppTheme.textDark,
+                                  ),
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.notifications_outlined,
-                              color: AppTheme.textDark,
-                              size: 24,
-                            ),
+                          ),
+
+                          // [REVISI] Icon Keranjang dengan Badge
+                          Consumer<CartProvider>(
+                            builder: (context, cart, child) {
+                              // Hitung total items
+                              int itemCount = cart.items.length;
+                              String badgeText = itemCount > 99
+                                  ? "99+"
+                                  : itemCount.toString();
+
+                              return GestureDetector(
+                                onTap: () async {
+                                  // [PERBAIKAN] Tunggu hasil dari CartPage
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const CartPage(),
+                                    ),
+                                  );
+
+                                  // Jika kembali dari cart (result == true), refresh cart
+                                  if (result == true && context.mounted) {
+                                    Provider.of<CartProvider>(
+                                      context,
+                                      listen: false,
+                                    ).getCart();
+                                  }
+                                },
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Colors.grey.shade200,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.shopping_bag_outlined,
+                                        color: AppTheme.textDark,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    if (itemCount > 0)
+                                      Positioned(
+                                        right: -2,
+                                        top: -2,
+                                        child: AnimatedContainer(
+                                          // Animasi sederhana saat angka berubah
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 20,
+                                            minHeight: 20,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              badgeText,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      // Search Bar Modern
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
+                      const SizedBox(height: 16),
+                      // Search Bar
+                      TextField(
+                        controller: _searchController,
+                        onSubmitted: _handleSearch,
+                        decoration: InputDecoration(
+                          hintText: "Cari ayam, daging, sayur...",
+                          hintStyle: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppTheme.primary,
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF3F4F6),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+              // 2. BANNER SLIDER
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 160,
+                  child: PageView.builder(
+                    controller: _bannerController,
+                    onPageChanged: (index) =>
+                        setState(() => _currentBanner = index),
+                    itemCount: _banners.length,
+                    itemBuilder: (context, index) {
+                      final banner = _banners[index];
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
                         decoration: BoxDecoration(
-                          color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
+                          gradient: LinearGradient(
+                            colors: banner['color'],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 15,
+                              color: (banner['color'][0] as Color).withOpacity(
+                                0.3,
+                              ),
+                              blurRadius: 10,
                               offset: const Offset(0, 5),
                             ),
                           ],
                         ),
-                        child: TextField(
-                          controller: _searchController,
-                          textInputAction: TextInputAction.search,
-                          onSubmitted: _handleSearch,
-                          decoration: InputDecoration(
-                            hintText: "Cari bahan masak...",
-                            hintStyle: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 14,
-                            ),
-                            icon: const Icon(
-                              Icons.search,
-                              color: AppTheme.primary,
-                            ),
-                            border: InputBorder.none,
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
-                                    onPressed: () => setState(() {
-                                      _searchController.clear();
-                                      _handleSearch('');
-                                    }),
-                                  )
-                                : null,
-                          ),
-                          onChanged: (val) => setState(() {}),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // 2. HERO BANNER (Full Width)
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 10,
-                    horizontal: 20,
-                  ),
-                  width: double.infinity,
-                  height: 170,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    image: const DecorationImage(
-                      // Ganti dengan asset banner jika ada, atau gunakan gradient
-                      image: AssetImage(
-                        'assets/images/logo.png',
-                      ), // Placeholder
-                      fit: BoxFit.cover,
-                      opacity: 0.1, // Transparansi gambar bg
-                    ),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF065F46),
-                        Color(0xFF10B981),
-                      ], // Dark Green to Emerald
-                      begin: Alignment.bottomLeft,
-                      end: Alignment.topRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.4),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Stack(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                "Promo Spesial",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            Positioned(
+                              right: -30,
+                              top: -30,
+                              child: CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.white.withOpacity(0.1),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              "Bahan Segar\nLangsung Antar",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                height: 1.1,
-                                fontFamily: 'ClashDisplay',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        right: -10,
-                        bottom: -10,
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          height: 140,
-                        ), // Ilustrasi
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // 3. KATEGORI (PILL SHAPE / KAPSUL)
-              SliverToBoxAdapter(
-                child: Consumer<ProductProvider>(
-                  builder: (context, provider, child) {
-                    final categories = provider.categories;
-                    return Container(
-                      height: 50, // Tinggi Pill
-                      margin: const EdgeInsets.symmetric(vertical: 20),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: categories.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final cat = categories[index];
-                          final slug = cat['slug'] ?? 'all';
-                          final name = cat['name'] ?? 'Semua';
-                          final isSelected = provider.selectedCategory == slug;
-                          final iconPath = _getCategoryIconPath(name);
-
-                          return GestureDetector(
-                            onTap: () => _handleCategorySelect(slug),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppTheme.primary
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(
-                                  30,
-                                ), // Kapsul
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppTheme.primary
-                                      : Colors.grey.shade200,
-                                ),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: AppTheme.primary.withOpacity(
-                                            0.3,
-                                          ),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ]
-                                    : null,
-                              ),
+                            Padding(
+                              padding: const EdgeInsets.all(20),
                               child: Row(
                                 children: [
-                                  Image.asset(
-                                    iconPath,
-                                    width: 20,
-                                    height: 20,
-                                  ), // Icon Kecil
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    name,
-                                    style: TextStyle(
-                                      color: isSelected
-                                          ? Colors.white
-                                          : Colors.grey[700],
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white24,
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            banner['title'],
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          banner['subtitle'],
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'ClashDisplay',
+                                            height: 1.1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Image.asset(
+                                      banner['image'],
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __, ___) =>
+                                          const SizedBox(),
                                     ),
                                   ),
                                 ],
                               ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              // 3. INFO BAR
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade100),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildInfoItem(
+                        Icons.verified_user_outlined,
+                        "100% Halal",
+                      ),
+                      Container(height: 20, width: 1, color: Colors.grey[300]),
+                      _buildInfoItem(Icons.timer_outlined, "Antar Cepat"),
+                      Container(height: 20, width: 1, color: Colors.grey[300]),
+                      _buildInfoItem(
+                        Icons.thumb_up_alt_outlined,
+                        "Pasti Segar",
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 4. KATEGORI
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
+                      child: Text(
+                        "Kategori Pilihan",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'ClashDisplay',
+                        ),
+                      ),
+                    ),
+                    Consumer<ProductProvider>(
+                      builder: (context, provider, child) {
+                        return SizedBox(
+                          height: 90,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: provider.categories.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 16),
+                            itemBuilder: (context, index) {
+                              final cat = provider.categories[index];
+                              final isSelected =
+                                  provider.selectedCategory ==
+                                  (cat['slug'] ?? 'all');
+                              return GestureDetector(
+                                onTap: () =>
+                                    _handleCategorySelect(cat['slug'] ?? 'all'),
+                                child: Column(
+                                  children: [
+                                    AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
+                                      width: 56,
+                                      height: 56,
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? AppTheme.primary
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: isSelected
+                                            ? null
+                                            : Border.all(
+                                                color: Colors.grey[200]!,
+                                              ),
+                                        boxShadow: isSelected
+                                            ? [
+                                                BoxShadow(
+                                                  color: AppTheme.primary
+                                                      .withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Image.asset(
+                                        _getCategoryIconPath(cat['name'] ?? ''),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      cat['name'] ?? '',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        color: isSelected
+                                            ? AppTheme.primary
+                                            : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // 5. REKOMENDASI (SKIP 5 LOGIC)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Spesial Hari Ini 🔥",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'ClashDisplay',
+                        ),
+                      ),
+                      // [REVISI] Timer Dihapus sesuai permintaan
+                    ],
+                  ),
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: Consumer<ProductProvider>(
+                  builder: (context, provider, child) {
+                    if (provider.isLoading)
+                      return const SizedBox(
+                        height: 200,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    if (provider.products.isEmpty)
+                      return const SizedBox.shrink();
+
+                    // [REVISI] Ambil 5 Pertama untuk Spesial Hari Ini
+                    final recommended = provider.products.take(5).toList();
+
+                    return SizedBox(
+                      height: 240,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: recommended.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 14),
+                        itemBuilder: (context, index) {
+                          final product = recommended[index];
+                          return SizedBox(
+                            width: 160,
+                            child: ProductCard(
+                              name: product.name,
+                              category: product.category,
+                              price: product.price,
+                              stock: product.stock,
+                              imageUrl: product.imageUrl ?? '',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      ProductDetailPage(product: product),
+                                ),
+                              ),
+                              onAdd: () async {
+                                final success = await Provider.of<CartProvider>(
+                                  context,
+                                  listen: false,
+                                ).addToCart(product.id);
+                                if (success && context.mounted) {
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).hideCurrentSnackBar();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Berhasil masuk keranjang"),
+                                      backgroundColor: AppTheme.primary,
+                                      duration: Duration(seconds: 1),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
                           );
                         },
@@ -367,36 +608,59 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // 4. JUDUL PRODUK
-              const SliverToBoxAdapter(
+              // 6. PRODUK TERLARIS (SKIP 5 LOGIC)
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Text(
-                    "Pilihan Terbaik",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'ClashDisplay',
-                    ),
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Produk Terlaris",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'ClashDisplay',
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CatalogPage(),
+                          ),
+                        ),
+                        child: const Text(
+                          "Lihat Semua",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
 
-              // 5. GRID PRODUK
               Consumer<ProductProvider>(
                 builder: (context, provider, child) {
-                  if (provider.isLoading)
-                    return const SliverFillRemaining(
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    );
                   if (provider.products.isEmpty)
-                    return const SliverFillRemaining(
-                      child: Center(child: Text("Produk tidak ditemukan")),
+                    return const SliverToBoxAdapter(
+                      child: SizedBox(height: 100),
                     );
+
+                  // [REVISI] SKIP 5 Logic: Lewati 5 produk pertama yang sudah muncul di atas
+                  // Agar produk tidak kembar
+                  final bestSellers = provider.products.length > 5
+                      ? provider.products
+                            .skip(5)
+                            .take(6)
+                            .toList() // Jika data > 5, skip 5 ambil 6
+                      : provider.products
+                            .take(6)
+                            .toList(); // Jika data sedikit, ambil saja semua
 
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -404,19 +668,25 @@ class _HomePageState extends State<HomePage> {
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.72,
+                            childAspectRatio: 0.70,
                             mainAxisSpacing: 16,
                             crossAxisSpacing: 16,
                           ),
                       delegate: SliverChildBuilderDelegate((context, index) {
-                        final product = provider.products[index];
+                        final product = bestSellers[index];
                         return ProductCard(
                           name: product.name,
                           category: product.category,
                           price: product.price,
                           stock: product.stock,
                           imageUrl: product.imageUrl ?? '',
-                          onTap: () {},
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ProductDetailPage(product: product),
+                            ),
+                          ),
                           onAdd: () async {
                             final success = await Provider.of<CartProvider>(
                               context,
@@ -427,30 +697,43 @@ class _HomePageState extends State<HomePage> {
                                 context,
                               ).hideCurrentSnackBar();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    "${product.name} masuk keranjang",
-                                  ),
+                                const SnackBar(
+                                  content: Text("Berhasil masuk keranjang"),
                                   backgroundColor: AppTheme.primary,
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 1),
+                                  duration: Duration(seconds: 1),
                                 ),
                               );
                             }
                           },
                         );
-                      }, childCount: provider.products.length),
+                      }, childCount: bestSellers.length),
                     ),
                   );
                 },
               ),
 
-              // Spacer Ekstra untuk Bottom Nav Floating
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoItem(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppTheme.primary),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textDark,
+          ),
+        ),
+      ],
     );
   }
 }
