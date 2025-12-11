@@ -6,6 +6,7 @@ import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/data/models/product_model.dart';
 import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/ui/pages/cart/checkout_page.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final ProductModel product;
@@ -301,17 +302,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                   if (mounted) {
                                     setState(() => _isAddingToCart = false);
                                     if (success) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            "${widget.product.name} masuk keranjang",
-                                          ),
-                                          backgroundColor: AppTheme.primary,
-                                          duration: const Duration(seconds: 1),
-                                        ),
-                                      );
+                                      ToastService.showSuccess(context,
+                                          "${widget.product.name} masuk keranjang");
                                     }
                                   }
                                 },

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/auth_provider.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -37,9 +38,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _pickImage() async {
     if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Fitur ini hanya di Aplikasi Mobile")),
-      );
+      ToastService.showWarning(
+          context, "Fitur ini hanya di Aplikasi Mobile");
       return;
     }
     final XFile? picked = await _picker.pickImage(
@@ -53,12 +53,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _saveProfile() async {
     if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Nama wajib diisi"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ToastService.showError(context, "Nama wajib diisi");
       return;
     }
 
@@ -68,24 +63,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
     ).updateProfile(_nameController.text, _imageFile);
 
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Profil diperbarui!"),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ToastService.showSuccess(context, "Profil diperbarui!");
       Navigator.pop(context);
     } else if (mounted) {
       final error = Provider.of<AuthProvider>(
         context,
         listen: false,
       ).errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error ?? "Gagal update"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ToastService.showError(context, error ?? "Gagal update");
     }
   }
 

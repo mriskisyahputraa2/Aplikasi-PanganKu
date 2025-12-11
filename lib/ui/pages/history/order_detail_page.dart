@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/setting_provider.dart';
 import 'package:panganku_mobile/providers/order_provider.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class OrderDetailPage extends StatefulWidget {
@@ -89,12 +90,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Nomor Order disalin!"),
-        duration: Duration(seconds: 1),
-      ),
-    );
+    ToastService.showSuccess(context, "Nomor Order disalin!");
   }
 
   void _contactAdmin(String orderNumber) async {
@@ -116,11 +112,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   void _pickImage() async {
     // Cek Web agar tidak crash (Opsional, tapi aman)
     if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Upload file hanya tersedia di Aplikasi Mobile."),
-        ),
-      );
+      ToastService.showWarning(
+          context, "Upload file hanya tersedia di Aplikasi Mobile.");
       return;
     }
 
@@ -139,27 +132,16 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     if (_selectedProof == null) return;
 
     final provider = Provider.of<OrderProvider>(context, listen: false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Mengupload bukti...")));
+    ToastService.showWarning(context, "Mengupload bukti...");
 
     final success = await provider.uploadProof(widget.orderId, _selectedProof!);
 
     if (success && mounted) {
       setState(() => _selectedProof = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Berhasil diupload!"),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ToastService.showSuccess(context, "Berhasil diupload!");
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? "Gagal upload"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ToastService.showError(
+          context, provider.errorMessage ?? "Gagal upload");
     }
   }
 
@@ -197,19 +179,22 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     final provider = Provider.of<OrderProvider>(context, listen: false);
     bool success = false;
 
-    if (action == 'complete')
+    if (action == 'complete') {
       success = await provider.completeOrder(widget.orderId);
-    if (action == 'cancel')
+    }
+    if (action == 'cancel') {
       success = await provider.cancelOrder(widget.orderId);
+    }
 
     if (success && mounted) {
       String msg = action == 'complete'
           ? "Pesanan Selesai. Terima Kasih!"
           : "Pesanan Dibatalkan.";
-      Color color = action == 'complete' ? Colors.green : Colors.red;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+      if (action == 'complete') {
+        ToastService.showSuccess(context, msg);
+      } else {
+        ToastService.showError(context, msg);
+      }
     }
   }
 
@@ -240,17 +225,18 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         builder: (context, provider, child) {
           final order = provider.selectedOrder;
 
-          if (provider.isLoading && order == null)
+          if (provider.isLoading && order == null) {
             return const Center(
               child: CircularProgressIndicator(color: AppTheme.primary),
             );
-          if (order == null)
+          }
+          if (order == null) {
             return const Center(child: Text("Gagal memuat data"));
+          }
 
           // --- LOGIC STATUS ---
           bool isPending = order.status == 'menunggu_pembayaran';
-          bool showUpload =
-              isPending &&
+          bool showUpload = isPending &&
               order.paymentProofUrl == null &&
               order.paymentMethod != 'tunai';
           bool showCancel = isPending;

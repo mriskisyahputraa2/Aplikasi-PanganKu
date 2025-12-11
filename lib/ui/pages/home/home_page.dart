@@ -9,6 +9,7 @@ import 'package:panganku_mobile/ui/widgets/product_card.dart';
 import 'package:panganku_mobile/ui/pages/product/product_detail_page.dart';
 import 'package:panganku_mobile/ui/pages/product/catalog_page.dart';
 import 'package:panganku_mobile/ui/pages/cart/cart_page.dart'; // Import Cart Page
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -546,13 +547,15 @@ class _HomePageState extends State<HomePage> {
               SliverToBoxAdapter(
                 child: Consumer<ProductProvider>(
                   builder: (context, provider, child) {
-                    if (provider.isLoading)
+                    if (provider.isLoading) {
                       return const SizedBox(
                         height: 200,
                         child: Center(child: CircularProgressIndicator()),
                       );
-                    if (provider.products.isEmpty)
+                    }
+                    if (provider.products.isEmpty) {
                       return const SizedBox.shrink();
+                    }
 
                     // [REVISI] Ambil 5 Pertama untuk Spesial Hari Ini
                     final recommended = provider.products.take(5).toList();
@@ -587,16 +590,8 @@ class _HomePageState extends State<HomePage> {
                                   listen: false,
                                 ).addToCart(product.id);
                                 if (success && context.mounted) {
-                                  ScaffoldMessenger.of(
-                                    context,
-                                  ).hideCurrentSnackBar();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Berhasil masuk keranjang"),
-                                      backgroundColor: AppTheme.primary,
-                                      duration: Duration(seconds: 1),
-                                    ),
-                                  );
+                                  ToastService.showSuccess(
+                                      context, "Berhasil masuk keranjang");
                                 }
                               },
                             ),
@@ -646,32 +641,33 @@ class _HomePageState extends State<HomePage> {
 
               Consumer<ProductProvider>(
                 builder: (context, provider, child) {
-                  if (provider.products.isEmpty)
+                  if (provider.products.isEmpty) {
                     return const SliverToBoxAdapter(
                       child: SizedBox(height: 100),
                     );
+                  }
 
                   // [REVISI] SKIP 5 Logic: Lewati 5 produk pertama yang sudah muncul di atas
                   // Agar produk tidak kembar
                   final bestSellers = provider.products.length > 5
                       ? provider.products
-                            .skip(5)
-                            .take(6)
-                            .toList() // Jika data > 5, skip 5 ambil 6
+                          .skip(5)
+                          .take(6)
+                          .toList() // Jika data > 5, skip 5 ambil 6
                       : provider.products
-                            .take(6)
-                            .toList(); // Jika data sedikit, ambil saja semua
+                          .take(6)
+                          .toList(); // Jika data sedikit, ambil saja semua
 
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverGrid(
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.70,
-                            mainAxisSpacing: 16,
-                            crossAxisSpacing: 16,
-                          ),
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.70,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                      ),
                       delegate: SliverChildBuilderDelegate((context, index) {
                         final product = bestSellers[index];
                         return ProductCard(
@@ -693,16 +689,8 @@ class _HomePageState extends State<HomePage> {
                               listen: false,
                             ).addToCart(product.id);
                             if (success && context.mounted) {
-                              ScaffoldMessenger.of(
-                                context,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Berhasil masuk keranjang"),
-                                  backgroundColor: AppTheme.primary,
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
+                              ToastService.showSuccess(
+                                  context, "Berhasil masuk keranjang");
                             }
                           },
                         );
