@@ -7,22 +7,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductProvider with ChangeNotifier {
   List<ProductModel> _products = [];
-  List<dynamic> _categories = []; // [BARU] Simpan data kategori
+  List<dynamic> _categories = [];
   bool _isLoading = false;
 
   // State Filter
   String _searchQuery = "";
-  String _selectedCategory = "Semua"; // Default 'Semua'
+  String _selectedCategory = "Semua";
 
   List<ProductModel> get products => _products;
   List<dynamic> get categories => _categories;
   bool get isLoading => _isLoading;
   String get selectedCategory => _selectedCategory;
 
-  // 1. Fetch Produk (Bisa dengan Filter)
+  // 1. Fetch Produk (Filter Logic)
   Future<void> fetchProducts({String query = "", String category = ""}) async {
     _isLoading = true;
-    _searchQuery = query;
+
+    // Update state filter jika ada perubahan
+    if (query.isNotEmpty || query == "") _searchQuery = query;
     if (category.isNotEmpty) _selectedCategory = category;
 
     notifyListeners();
@@ -31,11 +33,15 @@ class ProductProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
 
-      // Susun URL dengan Query Params
-      // Contoh: /api/products?search=ayam&category=ayam-potong
+      // Bangun URL
+      // Base: /api/products?search=...
       String url = "${ApiConstants.baseUrl}/products?search=$_searchQuery";
 
+      // Tambah kategori jika bukan 'Semua'
+      // Pastikan backend Anda menerima parameter 'category' (slug atau nama)
       if (_selectedCategory != "Semua") {
+        // Cari slug dari list categories berdasarkan nama, atau kirim namanya langsung
+        // Asumsi backend menerima slug/nama via param 'category'
         url += "&category=$_selectedCategory";
       }
 
@@ -49,20 +55,31 @@ class ProductProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> productList = data['data'];
+
+        // Handle format response (kadang data dibungkus 'data' lagi jika paginate)
+        List<dynamic> productList = [];
+        if (data['data'] is List) {
+          productList = data['data'];
+        } else if (data['data']['data'] is List) {
+          productList = data['data']['data'];
+        }
+
         _products = productList
             .map((json) => ProductModel.fromJson(json))
             .toList();
+      } else {
+        _products = [];
       }
     } catch (e) {
       print("Error fetching products: $e");
+      _products = [];
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // 2. [BARU] Fetch Kategori
+  // 2. Fetch Kategori
   Future<void> fetchCategories() async {
     try {
       final response = await http.get(
@@ -70,10 +87,13 @@ class ProductProvider with ChangeNotifier {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        _categories = data['data'];
+        final List<dynamic> catList = data['data'];
 
-        // Tambahkan opsi "Semua" di awal secara manual
-        _categories.insert(0, {'name': 'Semua', 'slug': 'all', 'icon': null});
+        // Reset dan isi ulang agar tidak duplikat
+        _categories = [
+          {'name': 'Semua', 'slug': 'all', 'icon': null},
+        ];
+        _categories.addAll(catList);
 
         notifyListeners();
       }
