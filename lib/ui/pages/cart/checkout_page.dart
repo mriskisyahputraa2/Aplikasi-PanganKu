@@ -426,9 +426,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         .map(
                           (item) => ListTile(
                             contentPadding: EdgeInsets.zero,
+                            // [PERBAIKAN BUG 4] Tampilkan gambar produk
+                            leading: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: CachedNetworkImage(
+                                imageUrl: item.product.imageUrl ?? '',
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => Container(
+                                  width: 50,
+                                  height: 50,
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.image_not_supported,
+                                      color: Colors.grey),
+                                ),
+                              ),
+                            ),
                             title: Text(
                               item.product.name,
-                              style: const TextStyle(fontSize: 14),
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.bold),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

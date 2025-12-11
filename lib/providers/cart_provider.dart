@@ -93,25 +93,29 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  // 3. Update Quantity (API)
+  // 3. Update Quantity (API) - [PERBAIKAN BUG 1]
   Future<bool> updateQty(int itemId, int quantity) async {
     if (quantity < 1) return false;
 
-    // Optimistic Update (Ubah di UI dulu biar cepet)
     final index = _items.indexWhere((item) => item.id == itemId);
-    if (index != -1) {
-      _items[index] = _items[index].copyWith(quantity: quantity);
-      notifyListeners();
-    }
+    if (index == -1) return false;
+
+    // Simpan state asli untuk revert jika gagal
+    final originalItems = List<CartItemModel>.from(_items);
+    final itemToUpdate = _items[index];
+
+    // Optimistic Update (Ubah di UI dulu)
+    final updatedItem = itemToUpdate.copyWith(quantity: quantity);
+    _items[index] = updatedItem;
+    notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
+      if (token == null) throw Exception('Authentication token not found.');
 
-      final response = await http.put(
-        Uri.parse(
-          "${ApiConstants.baseUrl}/cart/update/$itemId",
-        ), // Sesuaikan ID
+      final response = await http.post(
+        Uri.parse("${ApiConstants.baseUrl}/cart/update/$itemId"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -120,26 +124,39 @@ class CartProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        return true;
+        return true; // Sukses
       } else {
-        await fetchCart(); // Revert jika gagal
+        // Jika gagal, kembalikan ke state semula
+        _items = originalItems;
+        notifyListeners();
         return false;
       }
     } catch (e) {
-      await fetchCart();
+      // Jika ada error, kembalikan juga
+      _items = originalItems;
+      notifyListeners();
+      print("Error updating quantity: $e");
       return false;
     }
   }
 
-  // 4. Remove Item
+  // 4. Remove Item - [PERBAIKAN BUG 1]
   Future<bool> removeItem(int itemId) async {
-    // Hapus di UI dulu
-    _items.removeWhere((item) => item.id == itemId);
+    final index = _items.indexWhere((item) => item.id == itemId);
+    if (index == -1) return false;
+
+    // Simpan state asli dan item yang dihapus
+    final originalItems = List<CartItemModel>.from(_items);
+    final removedItem = _items[index];
+
+    // Optimistic Update (Hapus dari UI dulu)
+    _items.removeAt(index);
     notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
+      if (token == null) throw Exception('Authentication token not found.');
 
       final response = await http.delete(
         Uri.parse("${ApiConstants.baseUrl}/cart/remove/$itemId"),
@@ -150,13 +167,18 @@ class CartProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        return true;
+        return true; // Sukses
       } else {
-        await fetchCart(); // Revert
+        // Jika gagal, kembalikan item yang dihapus
+        _items = originalItems;
+        notifyListeners();
         return false;
       }
     } catch (e) {
-      await fetchCart();
+      // Jika error, kembalikan juga
+      _items = originalItems;
+      notifyListeners();
+      print("Error removing item: $e");
       return false;
     }
   }

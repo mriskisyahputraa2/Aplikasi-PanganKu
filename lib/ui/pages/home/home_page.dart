@@ -187,14 +187,22 @@ class _HomePageState extends State<HomePage> {
                                   : itemCount.toString();
 
                               return GestureDetector(
-                                onTap: () {
-                                  // Navigasi ke Halaman Cart (Opsional, jika ada)
-                                  Navigator.push(
+                                onTap: () async {
+                                  // [PERBAIKAN] Tunggu hasil dari CartPage
+                                  final result = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => const CartPage(),
                                     ),
                                   );
+
+                                  // Jika kembali dari cart (result == true), refresh cart
+                                  if (result == true && context.mounted) {
+                                    Provider.of<CartProvider>(
+                                      context,
+                                      listen: false,
+                                    ).getCart();
+                                  }
                                 },
                                 child: Stack(
                                   clipBehavior: Clip.none,
@@ -578,16 +586,18 @@ class _HomePageState extends State<HomePage> {
                                   context,
                                   listen: false,
                                 ).addToCart(product.id);
-                                if (success && context.mounted)
+                                if (success && context.mounted) {
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).hideCurrentSnackBar();
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text("${product.name} +1"),
+                                    const SnackBar(
+                                      content: Text("Berhasil masuk keranjang"),
                                       backgroundColor: AppTheme.primary,
-                                      duration: const Duration(
-                                        milliseconds: 500,
-                                      ),
+                                      duration: Duration(seconds: 1),
                                     ),
                                   );
+                                }
                               },
                             ),
                           );
@@ -682,14 +692,18 @@ class _HomePageState extends State<HomePage> {
                               context,
                               listen: false,
                             ).addToCart(product.id);
-                            if (success && context.mounted)
+                            if (success && context.mounted) {
+                              ScaffoldMessenger.of(
+                                context,
+                              ).hideCurrentSnackBar();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("${product.name} +1"),
+                                const SnackBar(
+                                  content: Text("Berhasil masuk keranjang"),
                                   backgroundColor: AppTheme.primary,
-                                  duration: const Duration(milliseconds: 500),
+                                  duration: Duration(seconds: 1),
                                 ),
                               );
+                            }
                           },
                         );
                       }, childCount: bestSellers.length),
