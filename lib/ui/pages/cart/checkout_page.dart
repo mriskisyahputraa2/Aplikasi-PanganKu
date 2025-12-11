@@ -1,7 +1,7 @@
-import 'dart:io'; // Import IO untuk File
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // Import Image Picker
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:panganku_mobile/core/theme/app_theme.dart';
@@ -9,9 +9,12 @@ import 'package:panganku_mobile/providers/auth_provider.dart';
 import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/providers/checkout_provider.dart';
 import 'package:panganku_mobile/ui/pages/main_page.dart';
+import 'package:panganku_mobile/data/models/product_model.dart';
 
 class CheckoutPage extends StatefulWidget {
-  const CheckoutPage({super.key});
+  final ProductModel? product;
+
+  const CheckoutPage({super.key, this.product});
 
   @override
   State<CheckoutPage> createState() => _CheckoutPageState();
@@ -24,8 +27,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String _selectedTime = "";
   String _deliveryType = 'delivery';
   String _paymentMethod = 'tunai';
-
-  // [BARU] Variable untuk menyimpan file bukti transfer
   File? _paymentProofFile;
   final ImagePicker _picker = ImagePicker();
 
@@ -52,14 +53,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(primary: AppTheme.primary),
-          ),
-          child: child!,
-        );
-      },
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(primary: AppTheme.primary),
+        ),
+        child: child!,
+      ),
     );
     if (picked != null) {
       setState(() {
@@ -69,21 +68,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  // [BARU] Fungsi Pilih Gambar dari Galeri
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 50,
     );
-    if (image != null) {
-      setState(() {
-        _paymentProofFile = File(image.path);
-      });
-    }
+    if (image != null) setState(() => _paymentProofFile = File(image.path));
   }
 
   void _handleSubmit() async {
-    // Validasi Dasar
     if (_nameController.text.isEmpty || _phoneController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -96,22 +89,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
       return;
     }
-    // Validasi Bukti Transfer (Jika bukan Tunai, Wajib Upload)
-    // if (_paymentMethod != 'tunai' && _paymentProofFile == null) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(
-    //       content: Text("Harap upload bukti transfer"),
-    //       backgroundColor: Colors.red,
-    //     ),
-    //   );
-    //   return;
-    // }
 
     final checkoutProvider = Provider.of<CheckoutProvider>(
       context,
       listen: false,
     );
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
     final success = await checkoutProvider.processCheckout(
       name: _nameController.text,
@@ -120,13 +102,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
       paymentMethod: _paymentMethod,
       address: _addressController.text,
       time: _selectedTime,
-      paymentProof: _paymentProofFile, // Kirim file
+      paymentProof: _paymentProofFile,
     );
 
     if (!mounted) return;
 
     if (success) {
-      _showSuccessDialog(cartProvider);
+      _showSuccessDialog();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -139,7 +121,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  void _showSuccessDialog(CartProvider cartProvider) {
+  void _showSuccessDialog() {
     showModalBottomSheet(
       context: context,
       isDismissible: false,
@@ -160,7 +142,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
             const SizedBox(height: 8),
             const Text(
-              "Terima kasih telah berbelanja. Cek status pesanan di menu Transaksi.",
+              "Terima kasih telah berbelanja.",
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey),
             ),
@@ -169,7 +151,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  cartProvider.fetchCart();
+                  Provider.of<CartProvider>(context, listen: false).fetchCart();
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (_) => const MainPage()),
@@ -195,10 +177,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final cart = Provider.of<CartProvider>(context);
     final checkoutData = Provider.of<CheckoutProvider>(context);
 
+    double finalTotalPrice = widget.product != null
+        ? widget.product!.price.toDouble()
+        : cart.totalPrice;
+
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFF3F4F6,
-      ), // Background Abu lebih gelap dikit biar card stand out
+      backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
         title: const Text(
           "Checkout",
@@ -287,7 +271,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
 
             // CARD 2: KONTAK
@@ -312,24 +295,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
 
-            // CARD 3: PEMBAYARAN (PREMIUM UI)
+            // CARD 3: PEMBAYARAN
             _buildCard(
               title: "Pembayaran",
               icon: Icons.payment,
               child: Column(
                 children: [
-                  // Opsi COD
                   _buildPaymentOption(
                     'tunai',
                     'Tunai (COD)',
                     'Bayar ditempat',
                     null,
                   ),
-
-                  // Opsi Transfer Dinamis
                   ...checkoutData.paymentMethods.map((method) {
                     return Column(
                       children: [
@@ -340,15 +319,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           "${method['account_number']} (a.n ${method['account_holder']})",
                           method['image_url'],
                         ),
-
-                        // [FITUR BARU] Area Upload Bukti jika metode ini dipilih
                         if (_paymentMethod == method['name'])
                           Container(
-                            margin: const EdgeInsets.only(
-                              left: 16,
-                              right: 16,
-                              bottom: 16,
-                            ),
+                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.yellow[50],
@@ -356,30 +329,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               border: Border.all(color: Colors.yellow[200]!),
                             ),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      size: 16,
-                                      color: Colors.orange[800],
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        "Silakan transfer ke rekening di atas, lalu upload buktinya di sini.",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.orange[900],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                const Text(
+                                  "Silakan transfer lalu upload bukti di sini.",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange,
+                                  ),
                                 ),
                                 const SizedBox(height: 12),
-
-                                // Tombol Upload / Preview
                                 GestureDetector(
                                   onTap: _pickImage,
                                   child: Container(
@@ -390,7 +348,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: Colors.grey[300]!,
-                                        style: BorderStyle.solid,
                                       ),
                                     ),
                                     child: _paymentProofFile != null
@@ -406,44 +363,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         : Column(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
-                                            children: [
+                                            children: const [
                                               Icon(
                                                 Icons.cloud_upload_outlined,
                                                 size: 40,
-                                                color: AppTheme.primary,
                                               ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                "Upload Bukti Transfer",
-                                                style: TextStyle(
-                                                  color: AppTheme.primary,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
+                                              Text("Upload Bukti"),
                                             ],
                                           ),
                                   ),
                                 ),
-                                if (_paymentProofFile != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: Center(
-                                      child: TextButton.icon(
-                                        onPressed: () => setState(
-                                          () => _paymentProofFile = null,
-                                        ),
-                                        icon: const Icon(
-                                          Icons.delete,
-                                          color: Colors.red,
-                                          size: 16,
-                                        ),
-                                        label: const Text(
-                                          "Hapus Gambar",
-                                          style: TextStyle(color: Colors.red),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
                               ],
                             ),
                           ),
@@ -453,64 +382,121 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
 
-            // CARD 4: RINGKASAN
+            // [PINDAH POSISI] CARD 4: RINCIAN PESANAN
+            _buildCard(
+              title: "Rincian Pesanan",
+              icon: Icons.receipt_long_outlined,
+              child: Column(
+                children: [
+                  if (widget.product != null)
+                    // Tampilan Jika Beli Langsung (1 Barang)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedNetworkImage(
+                          imageUrl: widget.product!.imageUrl ?? '',
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) =>
+                              Container(color: Colors.grey[200]),
+                        ),
+                      ),
+                      title: Text(
+                        widget.product!.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Text(
+                        "1 x ${currencyFormatter.format(widget.product!.price)}",
+                      ),
+                      trailing: Text(
+                        currencyFormatter.format(widget.product!.price),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  else
+                    // Tampilan Jika dari Keranjang (Looping)
+                    ...cart.items
+                        .map(
+                          (item) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              item.product.name,
+                              style: const TextStyle(fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              "${item.quantity} x ${currencyFormatter.format(item.product.price)}",
+                            ),
+                            trailing: Text(
+                              currencyFormatter.format(
+                                item.product.price * item.quantity,
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // CARD 5: RINGKASAN TAGIHAN
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Total Tagihan",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        currencyFormatter.format(cart.totalPrice),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    "Total Tagihan",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    currencyFormatter.format(finalTotalPrice),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                    ),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 100),
           ],
         ),
       ),
-
       bottomSheet: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
           boxShadow: [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 10,
-              offset: const Offset(0, -5),
+              offset: Offset(0, -5),
             ),
           ],
         ),
@@ -532,8 +518,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // --- WIDGET HELPER ---
-
+  // WIDGET HELPER
   Widget _buildCard({
     required String title,
     required IconData icon,
@@ -580,23 +565,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: Colors.grey),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      filled: true,
-      fillColor: Colors.grey[50],
-    );
-  }
+  InputDecoration _inputDecoration(String label, IconData icon) =>
+      InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.grey),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[50],
+      );
 
   Widget _buildTabOption(String title, IconData icon, String value) {
     final isSelected = _deliveryType == value;
@@ -642,7 +618,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return InkWell(
       onTap: () => setState(() {
         _paymentMethod = id;
-        _paymentProofFile = null; // Reset foto kalau ganti metode
+        _paymentProofFile = null;
       }),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
