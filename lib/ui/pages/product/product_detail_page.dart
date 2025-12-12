@@ -302,8 +302,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                   if (mounted) {
                                     setState(() => _isAddingToCart = false);
                                     if (success) {
-                                      ToastService.showSuccess(context,
-                                          "${widget.product.name} masuk keranjang");
+                                      ToastService.showSuccess(
+                                          context, "Berhasil masuk keranjang");
                                     }
                                   }
                                 },
