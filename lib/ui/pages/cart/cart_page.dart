@@ -10,6 +10,7 @@ import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/data/models/cart_item_model.dart';
 // [BARU] Import MainPage agar bisa kembali ke Home jika tombol back ditekan dari Tab
 import 'package:panganku_mobile/ui/pages/main_page.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -312,12 +313,7 @@ class CartItemWidget extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (controller.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Jumlah tidak boleh kosong."),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
+                ToastService.showWarning(context, "Jumlah tidak boleh kosong.");
                 return;
               }
               final val = int.tryParse(controller.text);
@@ -326,22 +322,12 @@ class CartItemWidget extends StatelessWidget {
                   cart.updateQty(item.id, val);
                   Navigator.pop(context);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        "Stok produk tidak mencukupi: ${item.product.stock}",
-                      ),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  ToastService.showError(context,
+                      "Stok produk tidak mencukupi: ${item.product.stock}");
                 }
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Jumlah harus lebih dari 0."),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
+                ToastService.showWarning(
+                    context, "Jumlah harus lebih dari 0.");
               }
             },
             style: ElevatedButton.styleFrom(
@@ -508,12 +494,8 @@ class CartItemWidget extends StatelessWidget {
                         if (item.quantity < item.product.stock) {
                           cart.updateQty(item.id, item.quantity + 1);
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Stok maksimal tercapai"),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
+                          ToastService.showWarning(
+                              context, "Stok maksimal tercapai");
                         }
                       },
                     ),

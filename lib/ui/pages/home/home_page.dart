@@ -8,7 +8,8 @@ import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/ui/widgets/product_card.dart';
 import 'package:panganku_mobile/ui/pages/product/product_detail_page.dart';
 import 'package:panganku_mobile/ui/pages/product/catalog_page.dart';
-import 'package:panganku_mobile/ui/pages/cart/cart_page.dart'; // Import Cart Page
+import 'package:panganku_mobile/ui/pages/cart/cart_page.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -130,10 +131,7 @@ class _HomePageState extends State<HomePage> {
             final p = Provider.of<ProductProvider>(context, listen: false);
             await p.fetchCategories();
             await p.fetchProducts();
-            await Provider.of<CartProvider>(
-              context,
-              listen: false,
-            ).getCart(); // Refresh Cart Badge
+            await Provider.of<CartProvider>(context, listen: false).getCart();
           },
           child: CustomScrollView(
             slivers: [
@@ -177,10 +175,9 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
 
-                          // [REVISI] Icon Keranjang dengan Badge
+                          // [PERUBAHAN DISINI] Icon Keranjang Baru (Pilihan 1)
                           Consumer<CartProvider>(
                             builder: (context, cart, child) {
-                              // Hitung total items
                               int itemCount = cart.items.length;
                               String badgeText = itemCount > 99
                                   ? "99+"
@@ -188,7 +185,6 @@ class _HomePageState extends State<HomePage> {
 
                               return GestureDetector(
                                 onTap: () async {
-                                  // [PERBAIKAN] Tunggu hasil dari CartPage
                                   final result = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -196,7 +192,6 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   );
 
-                                  // Jika kembali dari cart (result == true), refresh cart
                                   if (result == true && context.mounted) {
                                     Provider.of<CartProvider>(
                                       context,
@@ -207,37 +202,65 @@ class _HomePageState extends State<HomePage> {
                                 child: Stack(
                                   clipBehavior: Clip.none,
                                   children: [
+                                    // 1. Container Kotak Tumpul (Squircle)
                                     Container(
-                                      padding: const EdgeInsets.all(10),
+                                      padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(14),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.05,
+                                            ),
+                                            blurRadius: 15,
+                                            offset: const Offset(0, 5),
+                                          ),
+                                        ],
                                         border: Border.all(
-                                          color: Colors.grey.shade200,
+                                          color: Colors.grey.shade100,
                                         ),
-                                        shape: BoxShape.circle,
                                       ),
                                       child: const Icon(
-                                        Icons.shopping_bag_outlined,
+                                        Icons
+                                            .local_mall_outlined, // Icon Tas Belanja
                                         color: AppTheme.textDark,
-                                        size: 24,
+                                        size: 22,
                                       ),
                                     ),
+
+                                    // 2. Badge Notifikasi
                                     if (itemCount > 0)
                                       Positioned(
-                                        right: -2,
-                                        top: -2,
-                                        child: AnimatedContainer(
-                                          // Animasi sederhana saat angka berubah
-                                          duration: const Duration(
-                                            milliseconds: 300,
+                                        right: -4,
+                                        top: -4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 4,
                                           ),
-                                          padding: const EdgeInsets.all(5),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.red,
-                                            shape: BoxShape.circle,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEF4444),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFFEF4444,
+                                                ).withOpacity(0.3),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 4),
+                                              ),
+                                            ],
                                           ),
                                           constraints: const BoxConstraints(
-                                            minWidth: 20,
-                                            minHeight: 20,
+                                            minWidth: 22,
+                                            minHeight: 22,
                                           ),
                                           child: Center(
                                             child: Text(
@@ -537,7 +560,6 @@ class _HomePageState extends State<HomePage> {
                           fontFamily: 'ClashDisplay',
                         ),
                       ),
-                      // [REVISI] Timer Dihapus sesuai permintaan
                     ],
                   ),
                 ),
@@ -546,15 +568,16 @@ class _HomePageState extends State<HomePage> {
               SliverToBoxAdapter(
                 child: Consumer<ProductProvider>(
                   builder: (context, provider, child) {
-                    if (provider.isLoading)
+                    if (provider.isLoading) {
                       return const SizedBox(
                         height: 200,
                         child: Center(child: CircularProgressIndicator()),
                       );
-                    if (provider.products.isEmpty)
+                    }
+                    if (provider.products.isEmpty) {
                       return const SizedBox.shrink();
+                    }
 
-                    // [REVISI] Ambil 5 Pertama untuk Spesial Hari Ini
                     final recommended = provider.products.take(5).toList();
 
                     return SizedBox(
@@ -587,15 +610,9 @@ class _HomePageState extends State<HomePage> {
                                   listen: false,
                                 ).addToCart(product.id);
                                 if (success && context.mounted) {
-                                  ScaffoldMessenger.of(
+                                  ToastService.showSuccess(
                                     context,
-                                  ).hideCurrentSnackBar();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Berhasil masuk keranjang"),
-                                      backgroundColor: AppTheme.primary,
-                                      duration: Duration(seconds: 1),
-                                    ),
+                                    "Berhasil masuk keranjang",
                                   );
                                 }
                               },
@@ -646,21 +663,15 @@ class _HomePageState extends State<HomePage> {
 
               Consumer<ProductProvider>(
                 builder: (context, provider, child) {
-                  if (provider.products.isEmpty)
+                  if (provider.products.isEmpty) {
                     return const SliverToBoxAdapter(
                       child: SizedBox(height: 100),
                     );
+                  }
 
-                  // [REVISI] SKIP 5 Logic: Lewati 5 produk pertama yang sudah muncul di atas
-                  // Agar produk tidak kembar
                   final bestSellers = provider.products.length > 5
-                      ? provider.products
-                            .skip(5)
-                            .take(6)
-                            .toList() // Jika data > 5, skip 5 ambil 6
-                      : provider.products
-                            .take(6)
-                            .toList(); // Jika data sedikit, ambil saja semua
+                      ? provider.products.skip(5).take(6).toList()
+                      : provider.products.take(6).toList();
 
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -693,15 +704,9 @@ class _HomePageState extends State<HomePage> {
                               listen: false,
                             ).addToCart(product.id);
                             if (success && context.mounted) {
-                              ScaffoldMessenger.of(
+                              ToastService.showSuccess(
                                 context,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Berhasil masuk keranjang"),
-                                  backgroundColor: AppTheme.primary,
-                                  duration: Duration(seconds: 1),
-                                ),
+                                "Berhasil masuk keranjang",
                               );
                             }
                           },

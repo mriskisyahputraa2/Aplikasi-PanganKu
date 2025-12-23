@@ -6,6 +6,7 @@ import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/providers/product_provider.dart';
 import 'package:panganku_mobile/ui/pages/product/product_detail_page.dart';
 import 'package:panganku_mobile/ui/widgets/product_card.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class CatalogPage extends StatefulWidget {
   const CatalogPage({super.key});
@@ -265,12 +266,12 @@ class _CatalogPageState extends State<CatalogPage> {
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio:
-                              0.68, // Sedikit lebih tinggi agar elegan
-                          mainAxisSpacing: 20, // Spasi lebih lega
-                          crossAxisSpacing: 20, // Spasi lebih lega
-                        ),
+                      crossAxisCount: 2,
+                      childAspectRatio:
+                          0.68, // Sedikit lebih tinggi agar elegan
+                      mainAxisSpacing: 20, // Spasi lebih lega
+                      crossAxisSpacing: 20, // Spasi lebih lega
+                    ),
                     itemCount: provider.products.length,
                     itemBuilder: (context, index) {
                       final product = provider.products[index];
@@ -296,14 +297,8 @@ class _CatalogPageState extends State<CatalogPage> {
                           ).addToCart(product.id);
 
                           if (success && context.mounted) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Berhasil masuk keranjang"),
-                                backgroundColor: AppTheme.primary,
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
+                            ToastService.showSuccess(
+                                context, "Berhasil masuk keranjang");
                           }
                         },
                       );

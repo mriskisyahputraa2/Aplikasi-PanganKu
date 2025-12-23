@@ -4,6 +4,7 @@ import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/auth_provider.dart';
 // import 'package:panganku_mobile/ui/pages/main_page.dart';
 import 'package:panganku_mobile/ui/pages/auth/login_page.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -48,13 +49,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (success) {
         // 1. Tampilkan Pesan Sukses
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Registrasi Berhasil! Silakan Login."),
-            backgroundColor: AppTheme.primary,
-            duration: Duration(seconds: 2), // Tampil agak lama
-          ),
-        );
+        ToastService.showSuccess(
+            context, "Registrasi Berhasil! Silakan Login.");
 
         // 2. [UBAH ARAH] Pindah ke Halaman Login
         // pushAndRemoveUntil: Hapus halaman register dari history agar tidak bisa di-back
@@ -64,12 +60,8 @@ class _RegisterPageState extends State<RegisterPage> {
           (route) => false,
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? "Registrasi Gagal."),
-            backgroundColor: AppTheme.error,
-          ),
-        );
+        ToastService.showError(
+            context, authProvider.errorMessage ?? "Registrasi Gagal.");
       }
     }
   }

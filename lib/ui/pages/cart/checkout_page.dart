@@ -10,6 +10,7 @@ import 'package:panganku_mobile/providers/cart_provider.dart';
 import 'package:panganku_mobile/providers/checkout_provider.dart';
 import 'package:panganku_mobile/ui/pages/main_page.dart';
 import 'package:panganku_mobile/data/models/product_model.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   final ProductModel? product;
@@ -78,15 +79,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _handleSubmit() async {
     if (_nameController.text.isEmpty || _phoneController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Lengkapi data kontak")));
+      ToastService.showWarning(context, "Lengkapi data kontak");
       return;
     }
     if (_deliveryType == 'delivery' && _addressController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Alamat pengiriman wajib diisi")),
-      );
+      ToastService.showWarning(context, "Alamat pengiriman wajib diisi");
       return;
     }
 
@@ -110,14 +107,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (success) {
       _showSuccessDialog();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            checkoutProvider.errorMessage ?? "Gagal memproses pesanan",
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ToastService.showError(
+          context, checkoutProvider.errorMessage ?? "Gagal memproses pesanan");
     }
   }
 

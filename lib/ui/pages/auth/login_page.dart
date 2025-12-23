@@ -4,6 +4,7 @@ import 'package:panganku_mobile/core/theme/app_theme.dart';
 import 'package:panganku_mobile/providers/auth_provider.dart';
 import 'package:panganku_mobile/ui/pages/auth/register_page.dart';
 import 'package:panganku_mobile/ui/pages/main_page.dart';
+import 'package:panganku_mobile/utils/toast_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -37,12 +38,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Login Berhasil! Selamat Datang."),
-            backgroundColor: AppTheme.primary,
-          ),
-        );
+        ToastService.showSuccess(context, "Login Berhasil! Selamat Datang.");
 
         Navigator.pushReplacement(
           context,

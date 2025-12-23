@@ -1,17 +1,12 @@
+// API sudah terhubung dengan hosting
+
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // Untuk kIsWeb
+import 'package:flutter/foundation.dart';
 
 class ApiConstants {
-  // LOGIKA OTOMATIS MEMILIH HOST
   static String get _host {
-    if (kIsWeb) {
-      return "http://127.0.0.1:8000"; // Web Browser
-    } else if (Platform.isAndroid) {
-      // Jika pakai HP Fisik, Anda WAJIB ganti string ini manual ke IP Laptop (misal 192.168.1.X)
-      return "http://10.0.2.2:8000"; // Android Emulator
-    } else {
-      return "http://127.0.0.1:8000"; // iOS Simulator / Lainnya
-    }
+    // Langsung tembak ke domain hosting yang sudah live
+    return "https://panganku.mrkasir.com";
   }
 
   // BASE URLS
@@ -24,3 +19,29 @@ class ApiConstants {
   static String get user => "$baseUrl/user";
   static String get logout => "$baseUrl/logout";
 }
+
+// Lokal
+// import 'dart:io';
+// import 'package:flutter/foundation.dart';
+
+// class ApiConstants {
+//   static String get _host {
+//     if (kIsWeb) {
+//       return "http://127.0.0.1:8000";
+//     } else if (Platform.isAndroid) {
+//       // (Khusus HP Fisik Android)
+//       return "http://192.168.100.58:8000";
+//     } else {
+//       return "http://127.0.0.1:8000";
+//     }
+//   }
+
+//   // Bagian bawah ini tetap sama
+//   static String get baseUrl => "$_host/api";
+//   static String get storageBaseUrl => _host;
+
+//   static String get login => "$baseUrl/login";
+//   static String get register => "$baseUrl/register";
+//   static String get user => "$baseUrl/user";
+//   static String get logout => "$baseUrl/logout";
+// }
